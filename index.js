@@ -5,7 +5,7 @@ const bot = bedrock.createClient({
     port: 31654,
     username: 'SeniorBot',
     offline: true,
-    version: '1.26.1.1' // أحدث إصدار مستقر مدعوم
+    version: '1.26.0' // أحدث إصدار مستقر مدعوم
 })
 
 console.log("🔄 تشغيل البوت...")
