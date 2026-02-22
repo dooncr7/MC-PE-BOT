@@ -1,7 +1,6 @@
 {
-  "name": "mc-bow-bot",
+  "name": "mc-idle-bot",
   "version": "1.0.0",
-  "description": "Minecraft Bedrock Sneak Bot",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
