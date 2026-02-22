@@ -3,7 +3,7 @@ const bedrock = require('bedrock-protocol')
 const bot = bedrock.createClient({
     host: '191.96.231.12',
     port: 31654,
-    username: 'SeniorBot',
+    username: 'SeniorzzBot',
     offline: true,
     version: '1.26.0' // أحدث إصدار مستقر مدعوم
 })
