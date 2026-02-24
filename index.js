@@ -6,7 +6,6 @@ const PORT = 36190
 const BOT_NAMES = ["AFK_Bot1", "AFK_Bot2"]
 
 let bots = []
-let reconnecting = false
 
 function createBot(username) {
     const client = bedrock.createClient({
@@ -39,7 +38,7 @@ function connectBots() {
 
 function disconnectBots() {
     if (bots.length === 0) return
-    console.log("👤 تم اكتشاف لاعب حقيقي، خروج البوتات...")
+    console.log("🔴 يوجد أكثر من لاعب حقيقي، خروج البوتات...")
     bots.forEach(bot => {
         try { bot.disconnect() } catch {}
     })
@@ -47,16 +46,16 @@ function disconnectBots() {
 }
 
 function checkServer() {
-    if (reconnecting) return
-
     bedrock.ping({ host: HOST, port: PORT })
         .then(res => {
             const totalOnline = res.playersOnline
             const realPlayers = totalOnline - bots.length
 
-            if (realPlayers <= 0) {
+            if (realPlayers <= 1) {
+                // يبقوا إذا كانوا وحدهم أو مع لاعب واحد
                 connectBots()
             } else {
+                // إذا 2 لاعبين حقيقيين أو أكثر
                 disconnectBots()
             }
         })
