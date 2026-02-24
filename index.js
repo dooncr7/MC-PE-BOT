@@ -1,12 +1,12 @@
 const bedrock = require('bedrock-protocol')
 
-const HOST = "cosmoso.aternos.me" // ايبي السيرفر
-const PORT = 36190          // البورت
+const HOST = "cosmoso.aternos.me"
+const PORT = 36190
 
 const BOT_NAMES = ["AFK_Bot1", "AFK_Bot2"]
 
 let bots = []
-let reconnectTimeout = null
+let reconnecting = false
 
 function createBot(username) {
     const client = bedrock.createClient({
@@ -32,12 +32,14 @@ function createBot(username) {
 }
 
 function connectBots() {
-    console.log("🟢 السيرفر فارغ، دخول البوتات...")
+    if (bots.length > 0) return
+    console.log("🟢 دخول البوتات...")
     bots = BOT_NAMES.map(name => createBot(name))
 }
 
 function disconnectBots() {
-    console.log("👤 يوجد لاعب، خروج البوتات...")
+    if (bots.length === 0) return
+    console.log("👤 تم اكتشاف لاعب حقيقي، خروج البوتات...")
     bots.forEach(bot => {
         try { bot.disconnect() } catch {}
     })
@@ -45,15 +47,16 @@ function disconnectBots() {
 }
 
 function checkServer() {
+    if (reconnecting) return
+
     bedrock.ping({ host: HOST, port: PORT })
         .then(res => {
-            const online = res.playersOnline
+            const totalOnline = res.playersOnline
+            const realPlayers = totalOnline - bots.length
 
-            if (online === 0 && bots.length === 0) {
+            if (realPlayers <= 0) {
                 connectBots()
-            }
-
-            if (online > 0 && bots.length > 0) {
+            } else {
                 disconnectBots()
             }
         })
