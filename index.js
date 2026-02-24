@@ -1,76 +1,65 @@
 const bedrock = require('bedrock-protocol')
 
-const HOST = "cosmoso.aternos.me" // ضع ايبي سيرفرك
-const PORT = 36190           // ضع البورت
-const USERNAME = "AFK_Bot"   // اسم البوت
+const HOST = "cosmoso.aternos.me" // ايبي السيرفر
+const PORT = 36190          // البورت
 
-let client = null
+const BOT_NAMES = ["AFK_Bot1", "AFK_Bot2"]
+
+let bots = []
 let reconnectTimeout = null
-let checkingPlayers = false
 
-function connectBot() {
-    console.log("🔄 محاولة دخول البوت...")
-
-    client = bedrock.createClient({
+function createBot(username) {
+    const client = bedrock.createClient({
         host: HOST,
         port: PORT,
-        username: USERNAME,
+        username: username,
         offline: true
     })
 
     client.on('join', () => {
-        console.log("✅ البوت دخل السيرفر")
-        checkingPlayers = true
-    })
-
-    client.on('player_list', (packet) => {
-        if (!checkingPlayers) return
-
-        const players = packet.records || []
-        const realPlayers = players.filter(p => p.username !== USERNAME)
-
-        if (realPlayers.length > 0) {
-            console.log("👤 يوجد لاعب داخل السيرفر، خروج البوت...")
-            checkingPlayers = false
-            client.disconnect()
-        }
+        console.log(`✅ ${username} دخل السيرفر`)
     })
 
     client.on('disconnect', () => {
-        console.log("❌ البوت خرج من السيرفر")
-        scheduleReconnect()
+        console.log(`❌ ${username} خرج`)
     })
 
     client.on('error', (err) => {
-        console.log("⚠️ خطأ:", err.message)
+        console.log(`⚠️ خطأ ${username}:`, err.message)
     })
+
+    return client
 }
 
-function scheduleReconnect() {
-    if (reconnectTimeout) return
-    reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null
-        checkServerEmpty()
-    }, 5000)
+function connectBots() {
+    console.log("🟢 السيرفر فارغ، دخول البوتات...")
+    bots = BOT_NAMES.map(name => createBot(name))
 }
 
-function checkServerEmpty() {
-    const ping = bedrock.ping({ host: HOST, port: PORT })
-
-    ping.then(res => {
-        const online = res.playersOnline
-
-        if (online === 0) {
-            console.log("🟢 السيرفر فارغ، دخول البوت...")
-            connectBot()
-        } else {
-            console.log("🔴 يوجد لاعبين (" + online + ") ، انتظار...")
-            scheduleReconnect()
-        }
-    }).catch(() => {
-        console.log("⚠️ فشل فحص السيرفر")
-        scheduleReconnect()
+function disconnectBots() {
+    console.log("👤 يوجد لاعب، خروج البوتات...")
+    bots.forEach(bot => {
+        try { bot.disconnect() } catch {}
     })
+    bots = []
 }
 
-checkServerEmpty()
+function checkServer() {
+    bedrock.ping({ host: HOST, port: PORT })
+        .then(res => {
+            const online = res.playersOnline
+
+            if (online === 0 && bots.length === 0) {
+                connectBots()
+            }
+
+            if (online > 0 && bots.length > 0) {
+                disconnectBots()
+            }
+        })
+        .catch(() => {
+            console.log("⚠️ فشل فحص السيرفر")
+        })
+}
+
+setInterval(checkServer, 5000)
