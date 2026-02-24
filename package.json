@@ -1,12 +1,8 @@
 {
-  "name": "mc-idle-bot",
+  "name": "afk-bedrock-bot",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node index.js"
-  },
   "dependencies": {
-    "bedrock-protocol": "^3.40.0"
+    "bedrock-protocol": "^3.30.0"
   }
 }
