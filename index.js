@@ -6,6 +6,7 @@ const PORT = 36190
 const BOT_NAMES = ["AFK_Bot1", "AFK_Bot2"]
 
 let bots = []
+let playerCache = new Set()
 
 function createBot(username) {
     const client = bedrock.createClient({
@@ -17,6 +18,18 @@ function createBot(username) {
 
     client.on('join', () => {
         console.log(`✅ ${username} دخل السيرفر`)
+    })
+
+    client.on('player_list', (packet) => {
+        if (!packet.records) return
+
+        for (const p of packet.records) {
+            if (packet.records && p.username) {
+                playerCache.add(p.username)
+            }
+        }
+
+        checkPlayers()
     })
 
     client.on('disconnect', () => {
@@ -43,25 +56,20 @@ function disconnectBots() {
         try { bot.disconnect() } catch {}
     })
     bots = []
+    playerCache.clear()
 }
 
-function checkServer() {
-    bedrock.ping({ host: HOST, port: PORT })
-        .then(res => {
-            const totalOnline = res.playersOnline
-            const realPlayers = totalOnline - bots.length
+function checkPlayers() {
+    const realPlayers = [...playerCache].filter(
+        name => !BOT_NAMES.includes(name)
+    )
 
-            if (realPlayers <= 1) {
-                // يبقوا إذا كانوا وحدهم أو مع لاعب واحد
-                connectBots()
-            } else {
-                // إذا 2 لاعبين حقيقيين أو أكثر
-                disconnectBots()
-            }
-        })
-        .catch(() => {
-            console.log("⚠️ فشل فحص السيرفر")
-        })
+    // 👇 يبقوا إذا 0 أو 1 لاعب فقط
+    if (realPlayers.length <= 1) {
+        return
+    }
+
+    disconnectBots()
 }
 
-setInterval(checkServer, 5000)
+connectBots()
