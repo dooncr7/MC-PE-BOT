@@ -1,23 +1,76 @@
 const bedrock = require('bedrock-protocol')
 
-const bot = bedrock.createClient({
-    host: '191.96.231.12',
-    port: 31654,
-    username: 'IdleBot_' + Math.floor(Math.random() * 9999),
-    offline: true,
-    version: '1.26.0'
-})
+const HOST = "cosmoso.aternos.me" // ضع ايبي سيرفرك
+const PORT = 36190           // ضع البورت
+const USERNAME = "AFK_Bot"   // اسم البوت
 
-console.log("🔄 تشغيل البوت...")
+let client = null
+let reconnectTimeout = null
+let checkingPlayers = false
 
-bot.on('join', () => {
-    console.log("✅ البوت دخل السيرفر وبقي واقف بدون أي حركة.")
-})
+function connectBot() {
+    console.log("🔄 محاولة دخول البوت...")
 
-bot.on('disconnect', (reason) => {
-    console.log("❌ تم فصله:", reason)
-})
+    client = bedrock.createClient({
+        host: HOST,
+        port: PORT,
+        username: USERNAME,
+        offline: true
+    })
 
-bot.on('error', (err) => {
-    console.log("⚠️ خطأ:", err.message)
-})
+    client.on('join', () => {
+        console.log("✅ البوت دخل السيرفر")
+        checkingPlayers = true
+    })
+
+    client.on('player_list', (packet) => {
+        if (!checkingPlayers) return
+
+        const players = packet.records || []
+        const realPlayers = players.filter(p => p.username !== USERNAME)
+
+        if (realPlayers.length > 0) {
+            console.log("👤 يوجد لاعب داخل السيرفر، خروج البوت...")
+            checkingPlayers = false
+            client.disconnect()
+        }
+    })
+
+    client.on('disconnect', () => {
+        console.log("❌ البوت خرج من السيرفر")
+        scheduleReconnect()
+    })
+
+    client.on('error', (err) => {
+        console.log("⚠️ خطأ:", err.message)
+    })
+}
+
+function scheduleReconnect() {
+    if (reconnectTimeout) return
+    reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null
+        checkServerEmpty()
+    }, 5000)
+}
+
+function checkServerEmpty() {
+    const ping = bedrock.ping({ host: HOST, port: PORT })
+
+    ping.then(res => {
+        const online = res.playersOnline
+
+        if (online === 0) {
+            console.log("🟢 السيرفر فارغ، دخول البوت...")
+            connectBot()
+        } else {
+            console.log("🔴 يوجد لاعبين (" + online + ") ، انتظار...")
+            scheduleReconnect()
+        }
+    }).catch(() => {
+        console.log("⚠️ فشل فحص السيرفر")
+        scheduleReconnect()
+    })
+}
+
+checkServerEmpty()
