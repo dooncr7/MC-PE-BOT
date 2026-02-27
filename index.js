@@ -3,54 +3,18 @@ const bedrock = require('bedrock-protocol')
 const SERVER = {
     host: 'cosmoso.aternos.me',
     port: 36190,
-    version: '1.26.2' // لا تضع 1.26.2 إذا لم تكن مدعومة في المكتبة
+    version: '1.26.2'
 }
 
 const BOT_NAMES = ['AFK_Bot1', 'AFK_Bot2']
 let bots = []
-let botsConnected = false
+let realPlayers = 0
 
-// 🔍 فحص عدد اللاعبين الحقيقيين (نسخة آمنة)
-async function checkPlayers() {
-    try {
-        const ping = await bedrock.ping({
-            host: SERVER.host,
-            port: SERVER.port
-        })
-
-        if (!ping || !ping.players) {
-            console.log("Ping returned no player data")
-            return
-        }
-
-        let online = ping.players.online || 0
-
-        // لا نحتسب البوتات
-        if (botsConnected) {
-            online -= BOT_NAMES.length
-        }
-
-        if (online < 0) online = 0
-
-        console.log("Real players:", online)
-
-        if (online === 0 && !botsConnected) {
-            startBots()
-        }
-
-        if (online > 0 && botsConnected) {
-            stopBots()
-        }
-
-    } catch (err) {
-        console.log("Ping error:", err.message)
-    }
-}
-
-// 🚀 تشغيل البوتات
 function startBots() {
+
+    if (bots.length > 0) return
+
     console.log("Starting bots...")
-    botsConnected = true
 
     BOT_NAMES.forEach(name => {
 
@@ -62,36 +26,29 @@ function startBots() {
         })
 
         client.on('join', () => {
-            console.log(name + " joined server")
+            console.log(name + " joined")
+        })
 
-            // 🔥 فيزيائية + حركة طبيعية
-            const physics = setInterval(() => {
+        // 🔥 مراقبة دخول لاعبين حقيقيين
+        client.on('player_list', (packet) => {
 
-                if (!client.entity) return
+            if (!packet.records) return
 
-                const pos = client.entity.position
+            packet.records.forEach(record => {
 
-                client.queue('move_player', {
-                    runtime_entity_id: client.entity.runtime_entity_id,
-                    position: {
-                        x: pos.x + (Math.random() - 0.5) * 0.3,
-                        y: pos.y - 0.08, // gravity
-                        z: pos.z + (Math.random() - 0.5) * 0.3
-                    },
-                    pitch: 0,
-                    yaw: Math.random() * 360,
-                    head_yaw: Math.random() * 360,
-                    mode: 0,
-                    on_ground: false,
-                    ridden_runtime_entity_id: 0,
-                    teleport: false
-                })
+                if (!BOT_NAMES.includes(record.username)) {
 
-            }, 500)
+                    if (packet.records.length > BOT_NAMES.length) {
+                        realPlayers = packet.records.length - BOT_NAMES.length
+                    }
 
-            client.on('disconnect', () => {
-                clearInterval(physics)
+                }
+
             })
+
+            if (realPlayers > 0) {
+                stopBots()
+            }
         })
 
         client.on('disconnect', () => {
@@ -102,10 +59,11 @@ function startBots() {
     })
 }
 
-// ❌ إيقاف البوتات
 function stopBots() {
-    console.log("Stopping bots...")
-    botsConnected = false
+
+    if (bots.length === 0) return
+
+    console.log("Real player detected. Leaving...")
 
     bots.forEach(bot => {
         try {
@@ -114,9 +72,12 @@ function stopBots() {
     })
 
     bots = []
+
+    // ⏳ إعادة محاولة بعد 10 ثواني
+    setTimeout(() => {
+        startBots()
+    }, 10000)
 }
 
-// ⏱ فحص كل 5 ثواني
-setInterval(checkPlayers, 5000)
-
 console.log("Bot system started...")
+startBots()
